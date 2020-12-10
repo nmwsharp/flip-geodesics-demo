@@ -22,12 +22,13 @@ std::unique_ptr<ManifoldSurfaceMesh> mesh;
 std::unique_ptr<VertexPositionGeometry> geometry;
 
 // Polyscope visualization handle, to quickly add data to the surface
-polyscope::SurfaceMesh *psMesh;
+polyscope::SurfaceMesh* psMesh;
 
 // An edge network while processing flips
 std::unique_ptr<FlipEdgeNetwork> edgeNetwork;
 
 // UI parameters
+std::string loadedFilename = "";
 bool iterativeShortenUseIterationCap = false;
 int iterativeShortenIterationCap = 1;
 bool straightenAtMarked = true;
@@ -37,18 +38,11 @@ float iterativeShortenLengthLim = 0.5;
 int nBezierIters = 3;
 
 bool vizAllIntrinsicEdges = false;
-bool maintainDelaunay = false;
-bool makeMovie = false;
-bool flipMovie = false;
-bool ribbonPerEdge = true;
-bool ribbonAllEdge = false;
 float angleEPS = 1e-5;
 float splitAngleDeg = 10;
 float refineAreaThresh = std::numeric_limits<float>::infinity();
 float refineAngleThresh = 25.;
 int maxInsertions = -1;
-
-float tubeWidth = -1.;
 
 // ====== Path related stuff
 
@@ -58,13 +52,15 @@ void updatePathViz() {
     return;
   }
 
-  auto addPath = [&](std::string name,
-                     const std::vector<std::vector<SurfacePoint>> &pathPoints) {
+  // remove everything
+  psMesh->removeAllQuantities();
+
+  auto addPath = [&](std::string name, const std::vector<std::vector<SurfacePoint>>& pathPoints) {
     // Build a polyline of 3D coordinates
     std::vector<std::vector<Vector3>> pathTraces3D;
-    for (const std::vector<SurfacePoint> &edgePath : pathPoints) {
+    for (const std::vector<SurfacePoint>& edgePath : pathPoints) {
       pathTraces3D.emplace_back();
-      for (const SurfacePoint &p : edgePath) {
+      for (const SurfacePoint& p : edgePath) {
         Vector3 p3d = p.interpolate(geometry->inputVertexPositions);
         pathTraces3D.back().push_back(p3d);
       }
@@ -107,11 +103,10 @@ void createPathFromPoints() {
   long long int iVStart = psMesh->selectVertex();
   long long int iVEnd = psMesh->selectVertex();
 
-  if (iVStart == -1 || iVEnd == -1)
-    return;
+  if (iVStart == -1 || iVEnd == -1) return;
 
-  edgeNetwork = FlipEdgeNetwork::constructFromDijkstraPath(
-      *mesh, *geometry, mesh->vertex(iVStart), mesh->vertex(iVEnd));
+  edgeNetwork =
+      FlipEdgeNetwork::constructFromDijkstraPath(*mesh, *geometry, mesh->vertex(iVStart), mesh->vertex(iVEnd));
   if (edgeNetwork == nullptr) {
     polyscope::warning("could not initialize edge path between vertices");
     return;
@@ -163,8 +158,7 @@ void createPathFromEdgeSet() {
     }
   }
 
-  edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet,
-                                                  extraMarkedVertices);
+  edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet, extraMarkedVertices);
   if (edgeNetwork == nullptr) {
     polyscope::warning("could not initialize path from file");
     return;
@@ -178,8 +172,7 @@ void createPathFromObjLines() {
 
   auto findHalfedge = [&](Vertex vA, Vertex vB) {
     for (Halfedge he : vA.outgoingHalfedges()) {
-      if (he.twin().vertex() == vB)
-        return he;
+      if (he.twin().vertex() == vB) return he;
     }
     return Halfedge();
   };
@@ -187,18 +180,16 @@ void createPathFromObjLines() {
   std::vector<std::vector<Halfedge>> paths;
 
   { // Load the edge set from file
-    std::ifstream inStream("path_list.obj");
+    std::ifstream inStream(loadedFilename);
     if (!inStream) {
-      polyscope::error("could not read path_list.obj");
+      polyscope::error("could not read: " + loadedFilename);
       return;
     }
 
     for (std::string line; std::getline(inStream, line);) {
-      if (line.size() < 2 || line[0] != 'l' || line[1] != ' ')
-        continue; // look for line ('l' first char)
+      if (line.size() < 2 || line[0] != 'l' || line[1] != ' ') continue; // look for line ('l' first char)
 
-      std::istringstream lineStream(
-          line.substr(2)); // all but first char and space
+      std::istringstream lineStream(line.substr(2)); // all but first char and space
 
       // parse out list of indices
       std::vector<size_t> inds;
@@ -212,15 +203,14 @@ void createPathFromObjLines() {
 
       // build vertices
       paths.emplace_back();
-      std::vector<Halfedge> &path = paths.back();
+      std::vector<Halfedge>& path = paths.back();
       for (size_t i = 1; i < inds.size(); i++) {
         Vertex vA = mesh->vertex(inds[i - 1]);
         Vertex vB = mesh->vertex(inds[i]);
 
         Halfedge he = findHalfedge(vA, vB);
         if (he == Halfedge()) {
-          polyscope::warning("vertices " + std::to_string(inds[i - 1]) +
-                             " and " + std::to_string(inds[i]) +
+          polyscope::warning("vertices " + std::to_string(inds[i - 1]) + " and " + std::to_string(inds[i]) +
                              " are not connected");
           return;
         }
@@ -228,20 +218,17 @@ void createPathFromObjLines() {
       }
 
       // Try to close a loop
-      Halfedge lastHe =
-          findHalfedge(mesh->vertex(inds.back()), mesh->vertex(inds.front()));
+      Halfedge lastHe = findHalfedge(mesh->vertex(inds.back()), mesh->vertex(inds.front()));
       if (lastHe != Halfedge()) {
         std::cout << "    closing loop with halfedge " << lastHe << std::endl;
         path.push_back(lastHe);
       }
 
-      std::cout << "  ...found path with " << path.size() << " segments."
-                << std::endl;
+      std::cout << "  ...found path with " << path.size() << " segments." << std::endl;
     }
   }
 
-  std::cout << "Loaded line list with " << paths.size() << " paths."
-            << std::endl;
+  std::cout << "Loaded line list with " << paths.size() << " paths." << std::endl;
 
   edgeNetwork.reset(new FlipEdgeNetwork(*mesh, *geometry, paths));
   if (edgeNetwork == nullptr) {
@@ -256,13 +243,10 @@ void createPathFromObjLines() {
 void createPathFromDijkstraList() {
 
   // Create an  (initially-empty) edge network
-  edgeNetwork =
-      std::unique_ptr<FlipEdgeNetwork>(new FlipEdgeNetwork(*mesh, *geometry, {}));
+  edgeNetwork = std::unique_ptr<FlipEdgeNetwork>(new FlipEdgeNetwork(*mesh, *geometry, {}));
   edgeNetwork->posGeom = geometry.get();
 
-  std::cout << "!!! NOTE: Constructing Dijkstra paths on Delaunay-fied mesh"
-            << std::endl;
-  edgeNetwork->makeDelaunay();
+  std::cout << "!!! NOTE: Constructing Dijkstra paths on Delaunay-fied mesh" << std::endl;
 
   { // Load the edge set from file
     std::ifstream inStream("path_pairs.txt");
@@ -317,8 +301,7 @@ void createPathFromSeg() {
   // Make cut along boundary
   EdgeData<char> edgeSet(*mesh, false);
   for (Halfedge he : mesh->halfedges()) {
-    if (he.edge().isBoundary())
-      continue;
+    if (he.edge().isBoundary()) continue;
     if (segs[he.face()] != segs[he.twin().face()]) {
       edgeSet[he.edge()] = true;
     }
@@ -326,8 +309,7 @@ void createPathFromSeg() {
 
   VertexData<char> extraMarkedVertices(*mesh, false); // none
 
-  edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet,
-                                                  extraMarkedVertices);
+  edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet, extraMarkedVertices);
   if (edgeNetwork == nullptr) {
     polyscope::warning("could not initialize path from file");
     return;
@@ -340,7 +322,7 @@ void createPathFromSeg() {
 void createPathFromUVCut() {
 
   // (re)-load the obj file, and pull out corner coords
-  PolygonSoupMesh reloadMesh("uv_mesh.obj");
+  PolygonSoupMesh reloadMesh(loadedFilename);
   if (reloadMesh.paramCoordinates.empty()) {
     polyscope::warning("could not load UVs from mesh file");
     return;
@@ -361,8 +343,7 @@ void createPathFromUVCut() {
   // Detect cut as gap in UVs
   EdgeData<char> edgeSet(*mesh, false);
   for (Halfedge he : mesh->halfedges()) {
-    if (he.edge().isBoundary())
-      continue;
+    if (he.edge().isBoundary()) continue;
     if (uvCoords[he.corner()] != uvCoords[he.twin().next().corner()]) {
       edgeSet[he.edge()] = true;
     }
@@ -370,8 +351,7 @@ void createPathFromUVCut() {
 
   VertexData<char> extraMarkedVertices(*mesh, false); // none
 
-  edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet,
-                                                  extraMarkedVertices);
+  edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet, extraMarkedVertices);
   if (edgeNetwork == nullptr) {
     polyscope::warning("could not initialize path from file");
     return;
@@ -401,8 +381,7 @@ void makeDelaunay() {
     polyscope::warning("no path network");
     return;
   }
-  // edgeNetwork->makeDelaunay();
-  // TODO FIXME
+  edgeNetwork->makeDelaunay();
 }
 
 void locallyShorten() {
@@ -418,11 +397,8 @@ void locallyShorten() {
   edgeNetwork->EPS_ANGLE = angleEPS;
   edgeNetwork->straightenAroundMarkedVertices = straightenAtMarked;
 
-  size_t iterLim = iterativeShortenUseIterationCap
-                       ? iterativeShortenIterationCap
-                       : INVALID_IND;
-  double lengthLim =
-      useIterativeShortenLengthLim ? iterativeShortenLengthLim : 0.;
+  size_t iterLim = iterativeShortenUseIterationCap ? iterativeShortenIterationCap : INVALID_IND;
+  double lengthLim = useIterativeShortenLengthLim ? iterativeShortenLengthLim : 0.;
 
   if (iterativeShortenUseIterationCap) {
     edgeNetwork->iterativeShorten(iterLim, lengthLim);
@@ -436,9 +412,8 @@ void locallyShorten() {
     checkPath();
   }
 
-  std::cout << "shortening performed " << edgeNetwork->nShortenIters
-            << " iterations, with a total of " << edgeNetwork->nFlips
-            << " flips. " << std::endl;
+  std::cout << "shortening performed " << edgeNetwork->nShortenIters << " iterations, with a total of "
+            << edgeNetwork->nFlips << " flips. " << std::endl;
 }
 
 void bezierSubdivide() {
@@ -462,11 +437,8 @@ void delaunayRefine() {
     return;
   }
 
-  edgeNetwork->delaunayRefine(refineAreaThresh,
-                              maxInsertions == -1 ? INVALID_IND : maxInsertions,
-                              refineAngleThresh);
-  std::cout << "refined mesh has "
-            << edgeNetwork->tri->intrinsicMesh->nVertices() << " verts\n";
+  edgeNetwork->delaunayRefine(refineAreaThresh, maxInsertions == -1 ? INVALID_IND : maxInsertions, refineAngleThresh);
+  std::cout << "refined mesh has " << edgeNetwork->tri->intrinsicMesh->nVertices() << " verts\n";
 
   updatePathViz();
 }
@@ -481,7 +453,7 @@ void exportPathLines() {
     return;
   }
 
-  edgeNetwork->savePathOBJLine("", ribbonAllEdge);
+  edgeNetwork->savePathOBJLine("");
 }
 
 // Fancy path construction
@@ -492,9 +464,7 @@ VertexData<double> fancyPathVertexNumbers;
 bool fancyPathMarkVerts = false;
 void buildFancyPathUI() {
 
-  auto updateFancyPathViz = [&]() {
-    psMesh->addVertexCountQuantity("fancy path vertices", fancyPathVertsPs);
-  };
+  auto updateFancyPathViz = [&]() { psMesh->addVertexCountQuantity("fancy path vertices", fancyPathVertsPs); };
 
   if (ImGui::Button("Push Vertex")) {
 
@@ -516,11 +486,10 @@ void buildFancyPathUI() {
   }
 
   if (ImGui::Button("New Path From These Points")) {
-    edgeNetwork = FlipEdgeNetwork::constructFromPiecewiseDijkstraPath(
-        *mesh, *geometry, fancyPathVerts, fancyPathClosed, fancyPathMarkVerts);
+    edgeNetwork = FlipEdgeNetwork::constructFromPiecewiseDijkstraPath(*mesh, *geometry, fancyPathVerts, fancyPathClosed,
+                                                                      fancyPathMarkVerts);
     if (edgeNetwork == nullptr) {
-      polyscope::warning(
-          "could not initialize fancy edge path between vertices");
+      polyscope::warning("could not initialize fancy edge path between vertices");
       return;
     }
     edgeNetwork->posGeom = geometry.get();
@@ -534,13 +503,11 @@ void buildFancyPathUI() {
 // A user-defined callback, for creating control panels (etc)
 void myCallback() {
 
+  ImGui::TextUnformatted("Input");
+
   if (ImGui::Button("Construct new Dijkstra path from endpoints")) {
     clearData();
     createPathFromPoints();
-  }
-
-  if (ImGui::Button("Clear data")) {
-    clearData();
   }
 
   if (ImGui::TreeNode("Construct fancy path")) {
@@ -578,13 +545,18 @@ void myCallback() {
   ImGui::PushItemWidth(150);
 
   ImGui::Separator();
+  ImGui::TextUnformatted("Algorithm");
 
   // Straightening
-  if (ImGui::Button("Locally Shorten")) {
+  if (ImGui::Button("Make geodesic")) {
     locallyShorten();
     updatePathViz();
   }
   ImGui::SameLine();
+  if (ImGui::Button("Check Path")) {
+    checkPath();
+  }
+
   ImGui::Checkbox("Limit Iteration Count", &iterativeShortenUseIterationCap);
   if (iterativeShortenUseIterationCap) {
     ImGui::SameLine();
@@ -595,15 +567,6 @@ void myCallback() {
   if (useIterativeShortenLengthLim) {
     ImGui::SameLine();
     ImGui::InputFloat("Relative lim: ", &iterativeShortenLengthLim);
-  }
-
-  if (ImGui::Button("Make Delaunay")) {
-    makeDelaunay();
-    updatePathViz();
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Check Path")) {
-    checkPath();
   }
 
   // ====  Extras
@@ -637,25 +600,26 @@ void myCallback() {
 
   // ==== Visualization
   ImGui::Separator();
-  if (ImGui::TreeNode("Visualization")) {
+  ImGui::TextUnformatted("Visualization & Export");
+
+  if (ImGui::Checkbox("Show Intrinsic Edges", &vizAllIntrinsicEdges)) {
     if (edgeNetwork) {
-      if (ImGui::Button("Update")) {
-        updatePathViz();
-      }
-
-      ImGui::Checkbox("Show Intrinsic Edges", &vizAllIntrinsicEdges);
-
-      if (ImGui::Button("Export path lines")) {
-        exportPathLines();
-      }
+      updatePathViz();
     }
-    ImGui::TreePop();
+  }
+
+  if (ImGui::Button("Export path lines")) {
+    if (edgeNetwork) {
+      exportPathLines();
+    } else {
+      polyscope::warning("no path registered");
+    }
   }
 
   ImGui::PopItemWidth();
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 
   // Configure the argument parser
   args::ArgumentParser parser("Flip edges to find geodesic paths.");
@@ -664,10 +628,10 @@ int main(int argc, char **argv) {
   // Parse args
   try {
     parser.ParseCLI(argc, argv);
-  } catch (args::Help &) {
+  } catch (args::Help&) {
     std::cout << parser;
     return 0;
-  } catch (args::ParseError &e) {
+  } catch (args::ParseError& e) {
     std::cerr << e.what() << std::endl;
     std::cerr << parser;
     return 1;
@@ -686,14 +650,12 @@ int main(int argc, char **argv) {
   polyscope::state::userCallback = myCallback;
 
   // Load mesh
-  std::tie(mesh, geometry) = readManifoldSurfaceMesh(args::get(inputFilename));
+  loadedFilename = args::get(inputFilename);
+  std::tie(mesh, geometry) = readManifoldSurfaceMesh(loadedFilename);
 
   // Register the mesh with polyscope
-  psMesh = polyscope::registerSurfaceMesh(
-      "input mesh", geometry->inputVertexPositions, mesh->getFaceVertexList(),
-      polyscopePermutations(*mesh));
-
-  tubeWidth = polyscope::state::lengthScale / 500;
+  psMesh = polyscope::registerSurfaceMesh("input mesh", geometry->inputVertexPositions, mesh->getFaceVertexList(),
+                                          polyscopePermutations(*mesh));
 
   // Give control to the polyscope gui
   polyscope::show();
