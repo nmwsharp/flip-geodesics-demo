@@ -62,7 +62,7 @@ To verify the resulting path is really an exact polyhedral geodesic, the [check 
 Expanding the [extras] dropdown gives additional options:
 
 - **Bezier subdivision** iteratively constructs a smooth Bezier curve, treating the input path as control points. This option should be used when a single path between two endpoints is registered.
-- **Mesh improvement** performs intrinsic refinment to improve the quality of the resulting triangulation
+- **Mesh improvement** performs intrinsic refinment to improve the quality of the resulting triangulation.
 
 ### Visualization
 
@@ -74,7 +74,8 @@ By default, only the path itself is drawn, the [show intrinsic edges] checkbox d
 
 The [export path lines] button writes a file called `lines_out.obj`, containing line entries for the path network. Note that you problably want to export _after_ straightening, to export the geodesic path network.
 
-
 ## Command line interface
+
+**coming soon :)**
 
 The executable also supports scripted usage via a simple command line interface. See the `flip_geodesics --help` for additional documentation. This functionality essentially mimicks the GUI usage described above; see there for details.
