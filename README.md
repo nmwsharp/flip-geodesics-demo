@@ -43,6 +43,8 @@ The provided `CMakeLists.txt` should also generate solutions which compile in Vi
 
 After building, run the demo application like `./bin/flip_geodesics /path/to/your/mesh.obj`. The accepted mesh types are [documented](http://geometry-central.net/surface/utilities/io/) in geometry-central (for now: obj, ply, off, stl). The input should be a manifold triangle mesh.
 
+![gui screencap](https://raw.githubusercontent.com/nmwsharp/flip-geodesics-demo/master/media/gui_screencap.png)
+
 ### Basic input
 
 The simplest way to construct a path is to select two endpoints; the app will run Dijkstra's algorithm to generate an initial end path between the points. Click  <kbd>construct new Dijkstra path from endpoints</kbd> -- the app will then guide you to ctrl-click on two vertices (or instead enter vertex indices).
