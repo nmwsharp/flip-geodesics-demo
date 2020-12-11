@@ -4,6 +4,8 @@ C++ demo code and application for "[You Can Find Geodesic Paths in Triangle Mesh
 - Project: [link](https://nmwsharp.com/research/flip-geodesics/)
 - Talk: coming soon!
 
+This algorithm takes as input a path (or loop/network of paths) along the edges of a triangle mesh, and as output straightens that path to be a _geodesic_ (i.e. a straight line, or equivalently a locally-shortest path along a surface). The procedure runs in milliseconds, is quite robust, comes with a hard guarantee that no new crossings will be created in the path, and as an added benefit also generates a triangulation on the surface which conforms to the geodesic. Additionally, it even enables the construction of Bezier curves on a surface! 
+
 The main algorithm is implemented in [geometry-central](http://geometry-central.net/). This repository contains a simple demo application including a GUI to invoke that implementation.
 
 If this code contributes to academic work, please cite:
