@@ -56,33 +56,16 @@ void updatePathViz() {
   // remove everything
   psMesh->removeAllQuantities();
 
-  auto addPath = [&](std::string name, const std::vector<std::vector<SurfacePoint>>& pathPoints) {
-    // Build a polyline of 3D coordinates
-    std::vector<std::vector<Vector3>> pathTraces3D;
-    for (const std::vector<SurfacePoint>& edgePath : pathPoints) {
-      pathTraces3D.emplace_back();
-      for (const SurfacePoint& p : edgePath) {
-        Vector3 p3d = p.interpolate(geometry->inputVertexPositions);
-        pathTraces3D.back().push_back(p3d);
-      }
-    }
-
-    // Register with polyscope
-    auto pathQ = psMesh->addSurfaceGraphQuantity(name, pathTraces3D);
-
-    return pathQ;
-  };
-
-  auto pathQ = addPath("path edges", edgeNetwork->getPathPolyline());
+  auto pathQ = psMesh->addSurfaceGraphQuantity("path edges", edgeNetwork->getPathPolyline3D());
   pathQ->setEnabled(true);
   pathQ->setColor(polyscope::render::RGB_RED);
-  pathQ->setRadius(0.002);
+  pathQ->setRadius(0.001);
 
   if (vizAllIntrinsicEdges) {
-    auto edgeQ = addPath("intrinsic edges", edgeNetwork->allEdgePolyline());
+    auto edgeQ = psMesh->addSurfaceGraphQuantity("intrinsic edges", edgeNetwork->getAllEdgePolyline3D());
     edgeQ->setEnabled(true);
     edgeQ->setColor(polyscope::render::RGB_ORANGE);
-    edgeQ->setRadius(0.001);
+    edgeQ->setRadius(0.0005);
   }
 
   { // Marked vertices
@@ -95,7 +78,8 @@ void updatePathViz() {
       }
     }
     // Visualize balls at marked
-    polyscope::registerPointCloud("marked vertices", cloud);
+    auto psCloud = polyscope::registerPointCloud("marked vertices", cloud);
+    psCloud->setPointColor(polyscope::render::RGB_BLACK);
   }
 }
 
@@ -119,8 +103,8 @@ void createPathFromPoints() {
 
 void createPathFromEdgeSet() {
 
-  EdgeData<char> edgeSet(*mesh, false);
-  VertexData<char> extraMarkedVertices(*mesh, false);
+  EdgeData<bool> edgeSet(*mesh, false);
+  VertexData<bool> extraMarkedVertices(*mesh, false);
 
   { // Load the edge set from file
     std::ifstream inStream("path_edges.txt");
@@ -247,8 +231,6 @@ void createPathFromDijkstraList() {
   edgeNetwork = std::unique_ptr<FlipEdgeNetwork>(new FlipEdgeNetwork(*mesh, *geometry, {}));
   edgeNetwork->posGeom = geometry.get();
 
-  std::cout << "!!! NOTE: Constructing Dijkstra paths on Delaunay-fied mesh" << std::endl;
-
   { // Load the edge set from file
     std::ifstream inStream("path_pairs.txt");
     if (!inStream) {
@@ -300,7 +282,7 @@ void createPathFromSeg() {
   psMesh->addFaceScalarQuantity("segmentation", segs);
 
   // Make cut along boundary
-  EdgeData<char> edgeSet(*mesh, false);
+  EdgeData<bool> edgeSet(*mesh, false);
   for (Halfedge he : mesh->halfedges()) {
     if (he.edge().isBoundary()) continue;
     if (segs[he.face()] != segs[he.twin().face()]) {
@@ -308,7 +290,7 @@ void createPathFromSeg() {
     }
   }
 
-  VertexData<char> extraMarkedVertices(*mesh, false); // none
+  VertexData<bool> extraMarkedVertices(*mesh, false); // none
 
   edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet, extraMarkedVertices);
   if (edgeNetwork == nullptr) {
@@ -342,7 +324,7 @@ void createPathFromUVCut() {
   psMesh->addParameterizationQuantity("loaded UVs", uvCoords);
 
   // Detect cut as gap in UVs
-  EdgeData<char> edgeSet(*mesh, false);
+  EdgeData<bool> edgeSet(*mesh, false);
   for (Halfedge he : mesh->halfedges()) {
     if (he.edge().isBoundary()) continue;
     if (uvCoords[he.corner()] != uvCoords[he.twin().next().corner()]) {
@@ -350,7 +332,7 @@ void createPathFromUVCut() {
     }
   }
 
-  VertexData<char> extraMarkedVertices(*mesh, false); // none
+  VertexData<bool> extraMarkedVertices(*mesh, false); // none
 
   edgeNetwork = FlipEdgeNetwork::constructFromEdgeSet(*mesh, *geometry, edgeSet, extraMarkedVertices);
   if (edgeNetwork == nullptr) {
@@ -383,6 +365,7 @@ void makeDelaunay() {
     return;
   }
   edgeNetwork->makeDelaunay();
+  updatePathViz();
 }
 
 void locallyShorten() {
@@ -415,6 +398,8 @@ void locallyShorten() {
 
   std::cout << "shortening performed " << edgeNetwork->nShortenIters << " iterations, with a total of "
             << edgeNetwork->nFlips << " flips. " << std::endl;
+
+  updatePathViz();
 }
 
 void bezierSubdivide() {
@@ -446,7 +431,10 @@ void delaunayRefine() {
 
 // ====== General viz
 
-void clearData() { edgeNetwork.reset(); }
+void clearData() {
+  psMesh->removeAllQuantities();
+  edgeNetwork.reset();
+}
 
 void exportPathLines() {
   if (edgeNetwork == nullptr) {
@@ -551,7 +539,6 @@ void myCallback() {
   // Straightening
   if (ImGui::Button("Make geodesic")) {
     locallyShorten();
-    updatePathViz();
   }
   ImGui::SameLine();
   if (ImGui::Button("Check Path")) {
@@ -585,7 +572,7 @@ void myCallback() {
 
     if (ImGui::TreeNode("Intrinsic mesh improvement")) {
       if (ImGui::Button("Flip to Delaunay")) {
-        edgeNetwork->makeDelaunay();
+        makeDelaunay();
       }
       ImGui::InputInt("Max insert", &maxInsertions);
       ImGui::InputFloat("Area thresh", &refineAreaThresh);
@@ -627,7 +614,7 @@ int main(int argc, char** argv) {
   args::Positional<std::string> inputFilename(parser, "mesh", "A mesh file.");
 
   args::Group output(parser, "ouput");
-  //args::Flag noGUI(output, "noGUI", "exit after processing and do not open the GUI", {"noGUI"});
+  // args::Flag noGUI(output, "noGUI", "exit after processing and do not open the GUI", {"noGUI"});
 
   // Parse args
   try {
@@ -648,7 +635,7 @@ int main(int argc, char** argv) {
   }
 
   // Set options
-  //withGUI = !noGUI;
+  // withGUI = !noGUI;
   withGUI = true;
 
   // Initialize polyscope
