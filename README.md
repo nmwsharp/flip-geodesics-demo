@@ -41,6 +41,8 @@ The provided `CMakeLists.txt` should also generate solutions which compile in Vi
 
 ## Usage
 
+After building, run the demo application like `./bin/flip_geodesics /path/to/your/mesh.obj`. The accepted mesh types are [documented](http://geometry-central.net/surface/utilities/io/) in geometry-central (for now: obj, ply, off, stl). The input should be a manifold triangle mesh.
+
 ### Basic input
 
 The simplest way to construct a path is to select two endpoints; the app will run Dijkstra's algorithm to generate an initial end path between the points. Click  <kbd>construct new Dijkstra path from endpoints</kbd> -- the app will then guide you to ctrl-click on two vertices (or instead enter vertex indices).
@@ -74,7 +76,7 @@ Additionally, several loaders are included for other possible file formats. Thes
 
 ### FlipOut straightening
 
-Once a path/loop/network has been loaded, the  <kbd>make geodesics</kbd> button will straighten it to a geodesics. The optional checkboxes limit the number of `FlipOut()` iterations, or the limit the total length decrease. See the Visualization section 
+Once a path/loop/network has been loaded, the  <kbd>make geodesic</kbd> button will straighten it to a geodesics. The optional checkboxes limit the number of `FlipOut()` iterations, or the limit the total length decrease. See the Visualization section 
 
 To verify the resulting path is really an exact polyhedral geodesic, the <kbd>check path</kbd> button will measure the swept angles on either side of the path, and print the smallest such angle to the terminal. Mathematically, the FlipOut procedure is guaranteed to yield a geodesic; (very rare) failures in practice are due to the inaccuracies of floating point computation on degenerate meshes.
 
