@@ -29,6 +29,7 @@ std::unique_ptr<FlipEdgeNetwork> edgeNetwork;
 
 // UI parameters
 std::string loadedFilename = "";
+bool withGUI = true;
 bool iterativeShortenUseIterationCap = false;
 int iterativeShortenIterationCap = 1;
 bool straightenAtMarked = true;
@@ -625,6 +626,9 @@ int main(int argc, char** argv) {
   args::ArgumentParser parser("Flip edges to find geodesic paths.");
   args::Positional<std::string> inputFilename(parser, "mesh", "A mesh file.");
 
+  args::Group output(parser, "ouput");
+  //args::Flag noGUI(output, "noGUI", "exit after processing and do not open the GUI", {"noGUI"});
+
   // Parse args
   try {
     parser.ParseCLI(argc, argv);
@@ -643,22 +647,33 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // Initialize polyscope
-  polyscope::init();
+  // Set options
+  //withGUI = !noGUI;
+  withGUI = true;
 
-  // Set the callback function
-  polyscope::state::userCallback = myCallback;
+  // Initialize polyscope
+  if (withGUI) {
+    polyscope::init();
+    polyscope::state::userCallback = myCallback;
+  }
 
   // Load mesh
   loadedFilename = args::get(inputFilename);
   std::tie(mesh, geometry) = readManifoldSurfaceMesh(loadedFilename);
 
-  // Register the mesh with polyscope
-  psMesh = polyscope::registerSurfaceMesh("input mesh", geometry->inputVertexPositions, mesh->getFaceVertexList(),
-                                          polyscopePermutations(*mesh));
+  if (withGUI) {
+    // Register the mesh with polyscope
+    psMesh = polyscope::registerSurfaceMesh("input mesh", geometry->inputVertexPositions, mesh->getFaceVertexList(),
+                                            polyscopePermutations(*mesh));
+  }
 
-  // Give control to the polyscope gui
-  polyscope::show();
+  // Perform any operations requested via command line arguments
+
+  // Give control to the gui
+  if (withGUI) {
+    // Give control to the polyscope gui
+    polyscope::show();
+  }
 
   return EXIT_SUCCESS;
 }
