@@ -2,9 +2,24 @@ C++ demo code and application for "[You Can Find Geodesic Paths in Triangle Mesh
 
 - PDF: [link](https://nmwsharp.com/media/papers/flip-geodesics/flip_geodesics.pdf)
 - Project: [link](https://nmwsharp.com/research/flip-geodesics/)
-- Talk: TODO
+- Talk: coming soon!
 
 The main algorithm is implemented in [geometry-central](http://geometry-central.net/). This repository contains a simple demo application including a GUI to invoke that implementation.
+
+If this code contributes to academic work, please cite:
+
+```
+@article{sharp2020you,
+  title={You can find geodesic paths in triangle meshes by just flipping edges},
+  author={Sharp, Nicholas and Crane, Keenan},
+  journal={ACM Transactions on Graphics (TOG)},
+  volume={39},
+  number={6},
+  pages={1--15},
+  year={2020},
+  publisher={ACM New York, NY, USA}
+}
+```
 
 ## Cloning and building
 
@@ -20,7 +35,7 @@ make -j4
 
 The provided `CMakeLists.txt` should also generate solutions which compile in Visual Studio (see many tutorials online).
 
-## Basic usage
+## Usage
 
 ### Basic input
 
@@ -35,31 +50,31 @@ The app also offers several methods to construct more interesting initial paths.
 
 #### Fancy paths
 
-This method allows you to manually construct more interesting paths along the surface beyond just Dijkstra paths between endpoints. Open the menu via the [construct fancy path] dropdown.
+This method allows you to manually construct more interesting paths along the surface beyond just Dijkstra paths between endpoints. Open the menu via the  <kbd>construct fancy path</kbd> dropdown.
 
-  You can input a path by selecting a sequential list of points on the surface. Once some sequence of points has been added, selecting [new path from these points] will run Dijkstra's algorithm between each consecutive pair of points in the list to create the initial path. The [push vertex] button adds a point to the sequence, while [pop vertex] removes the most recent point.
+  You can input a path by selecting a sequential list of points on the surface. Once some sequence of points has been added, selecting  <kbd>new path from these points</kbd> will run Dijkstra's algorithm between each consecutive pair of points in the list to create the initial path. The  <kbd>push vertex</kbd> button adds a point to the sequence, while  <kbd>pop vertex</kbd> removes the most recent point.
 
-  Checking [created closed path] will connect the first and last points of the path to form a closed loop. Checking [mark interior vertices] will pin the curve to the selected vertex list during shortening.
+  Checking  <kbd>created closed path</kbd> will connect the first and last points of the path to form a closed loop. Checking  <kbd>mark interior vertices</kbd> will pin the curve to the selected vertex list during shortening.
 
 #### Speciality loaders
 
 Additionally, several loaders are included for other possible file formats. These interfaces are a bit ad-hoc, but are included to hopefully facilitate your own experiments and testing!
 
-- [load edge set] Create a path by specifying a list of collection of edges which make up the path. Loads from a file in the current directory called `path_edges.txt`, where each line contains two, space-separated 0-indexed vertex indices which are the endpoints of some edge in the path.  Additionally, if `marked_vertices.txt` is present it should hold one vertex index per line, which will be pinned during straightening.
-- [load line list obj]  Create a path network from [line elements](https://en.wikipedia.org/wiki/Wavefront_.obj_file#Line_elements) in an .obj file. Loads from the same file as the initial input to the program, which must be an .obj file. The line indices in this file must correspond to mesh vertex indices.
-- [load Dijkstra list] Create a path network from one or more Dijkstra paths between vertices. Loads from a file in the current directory called `path_pairs.txt`, where each line contains two, space-separated 0-indexed vertex indices which are the endpoints of the path. If this file has many lines, a network will be created. 
-- [load UV cut]  Create a path network from cuts (aka discontinuities aka island boundaries) in a UV map. Loads from the same file as the initial input to the program, which must be an .obj file with UVs specified.
-- [load seg cut] Create a path network from the boundary of a per-face segmentation. Loads from a plaintext file in the current directory called `cut.seg`, where each line corresponds gives an integer segmentation ID for a face.
+-  <kbd>load edge set</kbd> Create a path by specifying a list of collection of edges which make up the path. Loads from a file in the current directory called `path_edges.txt`, where each line contains two, space-separated 0-indexed vertex indices which are the endpoints of some edge in the path.  Additionally, if `marked_vertices.txt` is present it should hold one vertex index per line, which will be pinned during straightening.
+-  <kbd>load line list obj</kbd>  Create a path network from [line elements](https://en.wikipedia.org/wiki/Wavefront_.obj_file#Line_elements) in an .obj file. Loads from the same file as the initial input to the program, which must be an .obj file. The line indices in this file must correspond to mesh vertex indices.
+-  <kbd>load Dijkstra list</kbd> Create a path network from one or more Dijkstra paths between vertices. Loads from a file in the current directory called `path_pairs.txt`, where each line contains two, space-separated 0-indexed vertex indices which are the endpoints of the path. If this file has many lines, a network will be created. 
+-  <kbd>load UV cut</kbd>  Create a path network from cuts (aka discontinuities aka island boundaries) in a UV map. Loads from the same file as the initial input to the program, which must be an .obj file with UVs specified.
+-  <kbd>load seg cut</kbd> Create a path network from the boundary of a per-face segmentation. Loads from a plaintext file in the current directory called `cut.seg`, where each line corresponds gives an integer segmentation ID for a face.
 
 </details>
 
 ### FlipOut straightening
 
-Once a path/loop/network has been loaded, the [make geodesics] button will straighten it to a geodesics. The optional checkboxes limit the number of `FlipOut()` iterations, or the limit the total length decrease. See the Visualization section 
+Once a path/loop/network has been loaded, the  <kbd>make geodesics</kbd> button will straighten it to a geodesics. The optional checkboxes limit the number of `FlipOut()` iterations, or the limit the total length decrease. See the Visualization section 
 
-To verify the resulting path is really an exact polyhedral geodesic, the [check path] button will measure the swept angles on either side of the path, and print the smallest such angle to the terminal. Mathematically, the FlipOut procedure is guaranteed to yield a geodesic; (very rare) failures in practice are due to the inaccuracies of floating point computation on degenerate meshes.
+To verify the resulting path is really an exact polyhedral geodesic, the <kbd>check path</kbd> button will measure the swept angles on either side of the path, and print the smallest such angle to the terminal. Mathematically, the FlipOut procedure is guaranteed to yield a geodesic; (very rare) failures in practice are due to the inaccuracies of floating point computation on degenerate meshes.
 
-Expanding the [extras] dropdown gives additional options:
+Expanding the  <kbd>extras</kbd> dropdown gives additional options:
 
 - **Bezier subdivision** iteratively constructs a smooth Bezier curve, treating the input path as control points. This option should be used when a single path between two endpoints is registered.
 - **Mesh improvement** performs intrinsic refinment to improve the quality of the resulting triangulation.
@@ -68,11 +83,11 @@ Expanding the [extras] dropdown gives additional options:
 
 The app uses [polyscope](http://polyscope.run/) for visualization; see the documentation there for general details about the interface.
 
-Once as path is loaded, it will be drawn with a red curve along the surface. Expanding the [path edges] dropdown on the leftmost menu allows modifying the color and curve size, etc.
+Once as path is loaded, it will be drawn with a red curve along the surface. Expanding the <kbd>path edges</kbd> dropdown on the leftmost menu allows modifying the color and curve size, etc.
 
-By default, only the path itself is drawn, the [show intrinsic edges] checkbox draws _all_ edges in the underlying intrinsic triangulation, in yellow (which can again be tweaked via the options on the left).
+By default, only the path itself is drawn, the  <kbd>show intrinsic edges</kbd> checkbox draws _all_ edges in the underlying intrinsic triangulation, in yellow (which can again be tweaked via the options on the left).
 
-The [export path lines] button writes a file called `lines_out.obj`, containing line entries for the path network. Note that you problably want to export _after_ straightening, to export the geodesic path network.
+The  <kbd>export path lines</kbd> button writes a file called `lines_out.obj`, containing line entries for the path network. Note that you problably want to export _after_ straightening, to export the geodesic path network.
 
 ## Command line interface
 
