@@ -6,7 +6,7 @@ C++ demo code and application for "[You Can Find Geodesic Paths in Triangle Mesh
 
 ![shorten path to geodesic](https://raw.githubusercontent.com/nmwsharp/flip-geodesics-demo/master/media/make_geodesic.jpg)
 
-This algorithm takes as input a path (or loop/network of paths) along the edges of a triangle mesh, and as output straightens that path to be a _geodesic_ (i.e. a straight line, or equivalently a locally-shortest path along a surface). The procedure runs in milliseconds, is quite robust, comes with a hard guarantee that no new crossings will be created in the path, and as an added benefit also generates a triangulation on the surface which conforms to the geodesic. Additionally, it even enables the construction of Bezier curves on a surface! 
+This algorithm takes as input a path (or loop/network of paths) along the edges of a triangle mesh, and as output straightens that path to be a _geodesic_ (i.e. a straight line, or equivalently a locally-shortest path along a surface). The procedure runs in milliseconds, is quite robust, comes with a strong guarantee that no new crossings will be created in the path, and as an added benefit also generates a triangulation on the surface which conforms to the geodesic. Additionally, it even enables the construction of Bézier curves on a surface! 
 
 The main algorithm is implemented in [geometry-central](http://geometry-central.net/). This repository contains a simple demo application including a GUI to invoke that implementation.
 
@@ -82,8 +82,8 @@ To verify the resulting path is really an exact polyhedral geodesic, the <kbd>ch
 
 Expanding the  <kbd>extras</kbd> dropdown gives additional options:
 
-- **Bezier subdivision** iteratively constructs a smooth Bezier curve, treating the input path as control points. This option should be used when a single path between two endpoints is registered.
-- **Mesh improvement** performs intrinsic refinment to improve the quality of the resulting triangulation.
+- **Bézier subdivision** iteratively constructs a smooth Bézier curve, treating the input path as control points. This option should be used when a single path between two endpoints is registered.
+- **Mesh improvement** performs intrinsic refinement to improve the quality of the resulting triangulation.
 
 ### Visualization
 
@@ -93,10 +93,10 @@ Once as path is loaded, it will be drawn with a red curve along the surface. Exp
 
 By default, only the path itself is drawn, the  <kbd>show intrinsic edges</kbd> checkbox draws _all_ edges in the underlying intrinsic triangulation, in yellow (which can again be tweaked via the options on the left).
 
-The  <kbd>export path lines</kbd> button writes a file called `lines_out.obj`, containing line entries for the path network. Note that you problably want to export _after_ straightening, to export the geodesic path network.
+The  <kbd>export path lines</kbd> button writes a file called `lines_out.obj`, containing line entries for the path network. Note that you probably want to export _after_ straightening, to export the geodesic path network.
 
 ## Command line interface
 
 **coming soon :)**
 
-The executable also supports scripted usage via a simple command line interface. See the `flip_geodesics --help` for additional documentation. This functionality essentially mimicks the GUI usage described above; see there for details.
+The executable also supports scripted usage via a simple command line interface. See the `flip_geodesics --help` for additional documentation. This functionality essentially mimics the GUI usage described above; see there for details.
