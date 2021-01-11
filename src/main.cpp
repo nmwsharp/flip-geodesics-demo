@@ -384,6 +384,10 @@ void locallyShorten() {
   size_t iterLim = iterativeShortenUseIterationCap ? iterativeShortenIterationCap : INVALID_IND;
   double lengthLim = useIterativeShortenLengthLim ? iterativeShortenLengthLim : 0.;
 
+  // re-add all wedges to angle queue
+  // (this is generally extra unneeded work, but makes things simpler in case e.g. settings ^^^ changes after previous flips)
+  edgeNetwork->addAllWedgesToAngleQueue();
+
   if (iterativeShortenUseIterationCap) {
     edgeNetwork->iterativeShorten(iterLim, lengthLim);
   } else {
@@ -545,6 +549,7 @@ void myCallback() {
     checkPath();
   }
 
+  ImGui::Checkbox("Straighten at marked", &straightenAtMarked);
   ImGui::Checkbox("Limit Iteration Count", &iterativeShortenUseIterationCap);
   if (iterativeShortenUseIterationCap) {
     ImGui::SameLine();
